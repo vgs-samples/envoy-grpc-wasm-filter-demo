@@ -107,8 +107,33 @@ FilterHeadersStatus TransformContext::onRequestHeaders(uint32_t headers,
 
 FilterDataStatus TransformContext::onRequestBody(size_t body_buffer_length,
                                                  bool end_of_stream) {
-    // TODO:
-    return FilterDataStatus::Continue;
+    auto body =
+        getBufferBytes(WasmBufferType::HttpRequestBody, 0, body_buffer_length);
+    std::string bodyStr(body->view());
+
+    std::stringstream out;
+    out << "onRequestBody with body_buffer_length=" << body_buffer_length;
+    LOG_INFO(out.str());
+
+    GrpcService grpc_service;
+    grpc_service.mutable_envoy_grpc()->set_cluster_name("grpc");
+    std::string grpc_service_string;
+    grpc_service.SerializeToString(&grpc_service_string);
+
+    BodyRequest request;
+    request.set_content(bodyStr);
+
+    HeaderStringPairs initial_metadata;
+    std::string requestPayload = request.SerializeAsString();
+    auto res = root()->grpcCallHandler(
+        grpc_service_string, "Transform", "TransformBody", initial_metadata,
+        requestPayload, 1000,
+        std::unique_ptr<GrpcCallHandlerBase>(
+            new TransformGrpcCallHandler(this, false)));
+    if (res != WasmResult::Ok) {
+        LOG_ERROR("Sending gRPC failed: " + toString(res));
+    }
+    return FilterDataStatus::StopIterationAndBuffer;
 }
 
 TransformGrpcCallHandler::TransformGrpcCallHandler(TransformContext *context,
@@ -118,11 +143,10 @@ TransformGrpcCallHandler::TransformGrpcCallHandler(TransformContext *context,
 void TransformGrpcCallHandler::onSuccess(size_t body_size) {
     WasmDataPtr response_data =
         getBufferBytes(WasmBufferType::GrpcReceiveBuffer, 0, body_size);
-    const HeaderResponse &response = response_data->proto<HeaderResponse>();
-
     _transformContext->setEffectiveContext();
 
     if (this->_header) {
+        const HeaderResponse &response = response_data->proto<HeaderResponse>();
         LOG_INFO("Get header resp size: " + toString(response.headers_size()));
         for (size_t i = 0; i < response.headers_size(); ++i) {
             RequestHeaderItem item = response.headers(i);
@@ -146,6 +170,28 @@ void TransformGrpcCallHandler::onSuccess(size_t body_size) {
             }
         }
     } else {
+        size_t size;
+        uint32_t flags;
+        auto res =
+            getBufferStatus(WasmBufferType::HttpRequestBody, &size, &flags);
+        if (res != WasmResult::Ok) {
+            LOG_ERROR("Get buffer data size failed: " + toString(res));
+        }
+
+        const BodyResponse &response = response_data->proto<BodyResponse>();
+        auto originalBody =
+            getBufferBytes(WasmBufferType::HttpRequestBody, 0, size);
+        std::string bodyStr(originalBody->view());
+
+        std::stringstream out;
+        out << "Overwrite original body \"" << bodyStr << "\" to \""
+            << response.content() << "\"";
+        LOG_INFO(out.str());
+
+        setBuffer(WasmBufferType::HttpRequestBody, 0, size, response.content());
+        if (res != WasmResult::Ok) {
+            LOG_ERROR("Modifying buffer data failed: " + toString(res));
+        }
     }
     auto res = continueRequest();
     if (res == WasmResult::Ok) {

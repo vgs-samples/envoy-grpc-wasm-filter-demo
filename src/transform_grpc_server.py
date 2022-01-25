@@ -10,7 +10,7 @@ class Transformer(transform_pb2_grpc.TransformServicer):
 
     def TransformHeader(self, request, context):
         logger = logging.getLogger(__name__)
-        logger.info("Get request %s", request)
+        logger.info("Get header request %s", request)
         response = transform_pb2.HeaderResponse(path=request.path)
         for item in request.headers:
             if item.key == "x-change-me":
@@ -22,6 +22,11 @@ class Transformer(transform_pb2_grpc.TransformServicer):
         header.key = "x-new-header"
         header.value = "whatsup"
         return response
+
+    def TransformBody(self, request, context):
+        logger = logging.getLogger(__name__)
+        logger.info("Get body request %s", request)
+        return transform_pb2.BodyResponse(content=request.content.replace("foo", "bar"))
 
 
 def serve():

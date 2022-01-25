@@ -3,6 +3,7 @@ syntax = "proto3";
 // The service for transforming http request
 service Transform {
   rpc TransformHeader (HeaderRequest) returns (HeaderResponse) {}
+  rpc TransformBody (BodyRequest) returns (BodyResponse) {}
 }
 
 // The request header
@@ -11,14 +12,24 @@ message RequestHeaderItem {
   string value = 2;
 }
 
-// The http request header
+// The http request for header
 message HeaderRequest {
   string path = 1;
   repeated RequestHeaderItem headers = 2;
 }
 
-// The response message containing the greetings
+// The http response for header
 message HeaderResponse {
   string path = 1;
   repeated RequestHeaderItem headers = 2;
+}
+
+// The http request for body
+message BodyRequest {
+  string content = 1;
+}
+
+// The http response for body
+message BodyResponse {
+  string content = 1;
 }
