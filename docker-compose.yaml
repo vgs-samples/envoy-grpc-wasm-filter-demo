@@ -53,6 +53,24 @@ services:
     volumes:
     - ./src:/run/src
     - ./build:/run/build
+    profiles:
+    - "cmd"
+
+  # Command for generating cpp files of our gPRC protobuf file
+  make-cpp-grpc:
+    build:
+      context: .
+      dockerfile: Dockerfile-protoc
+    command:
+    - protoc
+    - --proto_path=/run/src/protobuf
+    - --cpp_out=/run/build
+    - '/run/src/protobuf/transform.proto'
+    volumes:
+    - ./src:/run/src
+    - ./build:/run/build
+    profiles:
+    - "cmd"
 
 networks:
   envoymesh: {}
