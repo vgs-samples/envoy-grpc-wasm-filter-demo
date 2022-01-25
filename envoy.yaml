@@ -41,7 +41,7 @@ static_resources:
                   vm_id: "my_vm_id"
                   code:
                     local:
-                      filename: "lib/myproject.wasm"
+                      filename: "/run/build/transform.wasm"
           - name: envoy.filters.http.router
 
   clusters:

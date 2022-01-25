@@ -14,6 +14,7 @@ services:
     - "8000:8000"
     volumes:
     - ./envoy.yaml:/etc/envoy.yaml
+    - "./build:/run/build"
 
   web_service:
     build:
@@ -26,9 +27,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-grpc
+    environment:
+      PYTHONPATH: "/app/build"
     command:
     - python3
-    - /app/greeter_server.py
+    - /app/src/transform_grpc_server.py
     volumes:
     - .:/app/
     networks:

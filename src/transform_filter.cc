@@ -1,5 +1,6 @@
 #include <string>
 #include <unordered_map>
+#include <sstream>
 
 #include "proxy_wasm_intrinsics.h"
 
@@ -13,19 +14,6 @@ public:
     void onTick() override;
 };
 
-class TransformContext;
-class TransformGrpcCallHandler
-    : public GrpcCallHandler<google::protobuf::Value> {
-public:
-    TransformGrpcCallHandler(TransformContext *context, bool header);
-    void onSuccess(size_t body_size) override;
-    void onFailure(GrpcStatus status) override;
-
-private:
-    TransformContext *context_;
-    bool header;
-};
-
 class TransformContext : public Context {
 public:
     explicit TransformContext(uint32_t id, RootContext *root)
@@ -35,10 +23,22 @@ public:
                                          bool end_of_stream) override;
     FilterDataStatus onRequestBody(size_t body_buffer_length,
                                    bool end_of_stream) override;
-    FilterTrailersStatus onRequestTrailers(
-        uint32_t body_buffer_length) override;
-    void onDone() override;
 };
+
+class TransformGrpcCallHandler
+    : public GrpcCallHandler<google::protobuf::Value> {
+public:
+    TransformGrpcCallHandler(TransformContext *context, bool header);
+    void onSuccess(size_t body_size) override;
+    void onFailure(GrpcStatus status) override;
+
+private:
+    // The context handler is attached to
+    TransformContext *_context;
+    // Are we currently processing header of request or not?
+    bool _header;
+};
+
 static RegisterContextFactory register_TransformContext(
     CONTEXT_FACTORY(TransformContext), ROOT_FACTORY(TransformRootContext),
     "my_root_id");
@@ -58,6 +58,12 @@ void TransformRootContext::onTick() { LOG_TRACE("onTick"); }
 
 FilterHeadersStatus TransformContext::onRequestHeaders(uint32_t headers,
                                                        bool end_of_stream) {
+    const auto path = getRequestHeader(":path");
+    const auto method = getRequestHeader(":method");
+    std::stringstream out;
+    out << "onRequestHeaders with path=" << path->view()
+        << ", method=" << method->view();
+    LOG_INFO(out.str());
     // TODO
     return FilterHeadersStatus::StopAllIterationAndBuffer;
 }
@@ -68,19 +74,9 @@ FilterDataStatus TransformContext::onRequestBody(size_t body_buffer_length,
     return FilterDataStatus::Continue;
 }
 
-FilterTrailersStatus TransformContext::onRequestTrailers(
-    uint32_t body_buffer_length) {
-    logInfo(std::string("onRequestTrailers "));
-    return FilterTrailersStatus::Continue;
-}
-
-void TransformContext::onDone() { logInfo("onDone " + std::to_string(id())); }
-
 TransformGrpcCallHandler::TransformGrpcCallHandler(TransformContext *context,
-                                                   bool header) {
-    context_ = context;
-    this->header = header;
-}
+                                                   bool header)
+    : _context(context), _header(header) {}
 
 void TransformGrpcCallHandler::onSuccess(size_t body_size) {
     // TODO:
