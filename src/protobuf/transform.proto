@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+// The service for transforming http request
+service Transform {
+  rpc TransformHeader (HeaderRequest) returns (HeaderResponse) {}
+}
+
+// The request header
+message RequestHeaderItem {
+  string key = 1;
+  optional string value = 2;
+}
+
+// The http request header
+message HeaderRequest {
+  string path = 1;
+  repeated RequestHeaderItem headers = 2;
+}
+
+// The response message containing the greetings
+message HeaderResponse {
+  string path = 1;
+  repeated RequestHeaderItem headers = 2;
+}
