@@ -1,0 +1,38 @@
+version: '3.7'
+services:
+
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile-proxy
+    depends_on:
+    - web_service
+    - grpc
+    networks:
+    - envoymesh
+    ports:
+    - "8000:8000"
+    volumes:
+    - ./envoy.yaml:/etc/envoy.yaml
+
+  web_service:
+    build:
+      context: .
+      dockerfile: Dockerfile-web-service
+    networks:
+    - envoymesh
+
+  grpc:
+    build:
+      context: .
+      dockerfile: Dockerfile-grpc
+    command:
+    - python3
+    - /app/greeter_server.py
+    volumes:
+    - .:/app/
+    networks:
+    - envoymesh
+
+networks:
+  envoymesh: {}
