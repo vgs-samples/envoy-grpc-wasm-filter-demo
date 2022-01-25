@@ -74,9 +74,15 @@ FilterHeadersStatus TransformContext::onRequestHeaders(uint32_t headers,
     HeaderRequest request;
     request.set_path(std::string(path->view()).c_str());
 
+    auto res = removeRequestHeader("content-length");
+    if (res != WasmResult::Ok) {
+        LOG_ERROR("Remove header failed: " + toString(res));
+    } else {
+        LOG_ERROR("Remove header ok: " + toString(res));
+    }
+
     auto result = getRequestHeaderPairs();
     auto pairs = result->pairs();
-
     LOG_TRACE(std::string("headers: ") + std::to_string(pairs.size()));
     for (auto &p : pairs) {
         LOG_TRACE(std::string(p.first) + std::string(" -> ") +
@@ -86,7 +92,16 @@ FilterHeadersStatus TransformContext::onRequestHeaders(uint32_t headers,
         item->set_value(std::string(p.second));
     }
 
-    // TODO
+    HeaderStringPairs initial_metadata;
+    std::string requestPayload = request.SerializeAsString();
+    res = root()->grpcCallHandler(
+        grpc_service_string, "Transform", "TransformHeader", initial_metadata,
+        requestPayload, 1000,
+        std::unique_ptr<GrpcCallHandlerBase>(
+            new TransformGrpcCallHandler(this, true)));
+    if (res != WasmResult::Ok) {
+        LOG_ERROR("Sending gRPC failed: " + toString(res));
+    }
     return FilterHeadersStatus::StopAllIterationAndBuffer;
 }
 
