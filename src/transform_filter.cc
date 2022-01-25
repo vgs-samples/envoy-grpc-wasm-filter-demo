@@ -123,23 +123,25 @@ void TransformGrpcCallHandler::onSuccess(size_t body_size) {
     _transformContext->setEffectiveContext();
 
     if (this->_header) {
+        LOG_INFO("Get header resp size: " + toString(response.headers_size()));
         for (size_t i = 0; i < response.headers_size(); ++i) {
             RequestHeaderItem item = response.headers(i);
-            if (item.mutable_value()) {
-                auto res = removeRequestHeader(item.key());
-                LOG_TRACE("Remove header " + item.key());
-                if (res == WasmResult::Ok) {
-                    LOG_TRACE("Remove header ok: " + toString(res));
-                } else {
-                    LOG_ERROR("Remove header failed: " + toString(res));
-                }
-            } else {
-                LOG_TRACE("Add header " + item.key() + " => " + item.value());
+            if (!getRequestHeader(":method")) {
+                LOG_INFO("Add header " + item.key() + " => " + item.value());
                 auto res = addRequestHeader(item.key(), item.value());
                 if (res == WasmResult::Ok) {
                     LOG_TRACE("Add header ok: " + toString(res));
                 } else {
                     LOG_ERROR("Add header failed: " + toString(res));
+                }
+            } else {
+                LOG_INFO("Replace header " + item.key() + " => " +
+                         item.value());
+                auto res = replaceRequestHeader(item.key(), item.value());
+                if (res == WasmResult::Ok) {
+                    LOG_TRACE("Replace header ok: " + toString(res));
+                } else {
+                    LOG_ERROR("Replace header failed: " + toString(res));
                 }
             }
         }

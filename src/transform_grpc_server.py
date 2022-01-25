@@ -11,7 +11,17 @@ class Transformer(transform_pb2_grpc.TransformServicer):
     def TransformHeader(self, request, context):
         logger = logging.getLogger(__name__)
         logger.info("Get request %s", request)
-        return transform_pb2.HeaderResponse(path=request.path)
+        response = transform_pb2.HeaderResponse(path=request.path)
+        for item in request.headers:
+            if item.key == "x-change-me":
+                header = response.headers.add()
+                header.key = item.key
+                header.value = f"modified {item.value}"
+                logger.info("Modify header %s => %s", item.key, header.value)
+        header = response.headers.add()
+        header.key = "x-new-header"
+        header.value = "whatsup"
+        return response
 
 
 def serve():
