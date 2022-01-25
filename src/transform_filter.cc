@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "proxy_wasm_intrinsics.h"
+#include "transform.pb.h"
 
 class TransformRootContext : public RootContext {
 public:
@@ -64,6 +65,27 @@ FilterHeadersStatus TransformContext::onRequestHeaders(uint32_t headers,
     out << "onRequestHeaders with path=" << path->view()
         << ", method=" << method->view();
     LOG_INFO(out.str());
+
+    GrpcService grpc_service;
+    grpc_service.mutable_envoy_grpc()->set_cluster_name("grpc");
+    std::string grpc_service_string;
+    grpc_service.SerializeToString(&grpc_service_string);
+
+    HeaderRequest request;
+    request.set_path(std::string(path->view()).c_str());
+
+    auto result = getRequestHeaderPairs();
+    auto pairs = result->pairs();
+
+    LOG_TRACE(std::string("headers: ") + std::to_string(pairs.size()));
+    for (auto &p : pairs) {
+        LOG_TRACE(std::string(p.first) + std::string(" -> ") +
+                  std::string(p.second));
+        RequestHeaderItem *item = request.add_headers();
+        item->set_key(std::string(p.first));
+        item->set_value(std::string(p.second));
+    }
+
     // TODO
     return FilterHeadersStatus::StopAllIterationAndBuffer;
 }

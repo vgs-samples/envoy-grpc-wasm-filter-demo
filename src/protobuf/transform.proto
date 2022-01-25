@@ -8,7 +8,7 @@ service Transform {
 // The request header
 message RequestHeaderItem {
   string key = 1;
-  optional string value = 2;
+  string value = 2;
 }
 
 // The http request header
