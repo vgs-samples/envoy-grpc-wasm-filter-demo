@@ -26,7 +26,7 @@ class Transformer(transform_pb2_grpc.TransformServicer):
     def TransformBody(self, request, context):
         logger = logging.getLogger(__name__)
         logger.info("Get body request %s", request)
-        return transform_pb2.BodyResponse(content=request.content.replace("foo", "bar"))
+        return transform_pb2.BodyResponse(content=request.content.replace("foo", "eggs"))
 
 
 def serve():
