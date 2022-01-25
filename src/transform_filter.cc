@@ -35,7 +35,7 @@ public:
 
 private:
     // The context handler is attached to
-    TransformContext *_context;
+    TransformContext *_transformContext;
     // Are we currently processing header of request or not?
     bool _header;
 };
@@ -113,12 +113,51 @@ FilterDataStatus TransformContext::onRequestBody(size_t body_buffer_length,
 
 TransformGrpcCallHandler::TransformGrpcCallHandler(TransformContext *context,
                                                    bool header)
-    : _context(context), _header(header) {}
+    : _transformContext(context), _header(header) {}
 
 void TransformGrpcCallHandler::onSuccess(size_t body_size) {
-    // TODO:
+    WasmDataPtr response_data =
+        getBufferBytes(WasmBufferType::GrpcReceiveBuffer, 0, body_size);
+    const HeaderResponse &response = response_data->proto<HeaderResponse>();
+
+    _transformContext->setEffectiveContext();
+
+    if (this->_header) {
+        for (size_t i = 0; i < response.headers_size(); ++i) {
+            RequestHeaderItem item = response.headers(i);
+            if (item.mutable_value()) {
+                auto res = removeRequestHeader(item.key());
+                LOG_TRACE("Remove header " + item.key());
+                if (res == WasmResult::Ok) {
+                    LOG_TRACE("Remove header ok: " + toString(res));
+                } else {
+                    LOG_ERROR("Remove header failed: " + toString(res));
+                }
+            } else {
+                LOG_TRACE("Add header " + item.key() + " => " + item.value());
+                auto res = addRequestHeader(item.key(), item.value());
+                if (res == WasmResult::Ok) {
+                    LOG_TRACE("Add header ok: " + toString(res));
+                } else {
+                    LOG_ERROR("Add header failed: " + toString(res));
+                }
+            }
+        }
+    } else {
+    }
+    auto res = continueRequest();
+    if (res == WasmResult::Ok) {
+        LOG_INFO("Continue ok: " + toString(res));
+    } else {
+        LOG_ERROR("Continue Failed: " + toString(res));
+    }
 }
 
 void TransformGrpcCallHandler::onFailure(GrpcStatus status) {
-    // TODO:
+    std::stringstream out;
+    auto p = getStatus();
+    out << "gRPC failed with status " << static_cast<int>(status) << " "
+        << std::string(p.second->view()) << " header = " << _header;
+    LOG_ERROR(out.str());
+    closeRequest();
 }
