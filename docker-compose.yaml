@@ -34,5 +34,21 @@ services:
     networks:
     - envoymesh
 
+  # Command for generating Python modules of our gPRC protobuf file
+  make-py-grpc:
+    build:
+      context: .
+      dockerfile: Dockerfile-grpc
+    command:
+    - python3
+    - -m
+    - grpc_tools.protoc
+    - -I/run/src/protobuf --python_out=/run/build --grpc_python_out=/run/build run/src/protobuf/*.proto
+    - python3
+    - /app/greeter_server.py
+    volumes:
+    - ./src:/run/src
+    - ./build:/run/build
+
 networks:
   envoymesh: {}
