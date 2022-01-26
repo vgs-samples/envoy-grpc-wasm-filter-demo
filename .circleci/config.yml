@@ -27,6 +27,8 @@ jobs:
       - run:
           name: build wasm filter
           command: |
+            docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh || true
+            # Hope the second time is the charm
             docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh
 
       - store_artifacts:
