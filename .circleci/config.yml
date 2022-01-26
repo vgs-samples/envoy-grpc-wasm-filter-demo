@@ -24,13 +24,14 @@ jobs:
             cd proxy-wasm-cpp-sdk
             docker build -t wasmsdk:v2 -f Dockerfile-sdk .
 
-      - run:
-          name: build wasm filter
-          command: |
-            docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh
+      # XXX: let the sdk build first and hope circle ci will cache docker layers for us
+      # - run:
+      #     name: build wasm filter
+      #     command: |
+      #       docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh
 
-      - store_artifacts:
-          path: build/transform.wasm
+      # - store_artifacts:
+      #     path: build/transform.wasm
 
 workflows:
   build:
