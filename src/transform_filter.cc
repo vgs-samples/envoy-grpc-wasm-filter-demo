@@ -188,7 +188,8 @@ void TransformGrpcCallHandler::onSuccess(size_t body_size) {
             << response.content() << "\"";
         LOG_INFO(out.str());
 
-        setBuffer(WasmBufferType::HttpRequestBody, 0, size, response.content());
+        res = setBuffer(WasmBufferType::HttpRequestBody, 0, size,
+                        response.content());
         if (res != WasmResult::Ok) {
             LOG_ERROR("Modifying buffer data failed: " + toString(res));
         }
