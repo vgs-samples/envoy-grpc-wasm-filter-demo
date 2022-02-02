@@ -4,7 +4,7 @@ jobs:
     machine:
       image: ubuntu-2004:202111-01
       docker_layer_caching: true
-    resource_class: large
+    resource_class: xlarge
 
     working_directory: ~/repo
 
@@ -28,10 +28,6 @@ jobs:
       - run:
           name: build wasm filter
           command: |
-            rm -f build/transform.wasm
-            docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh || true
-            # Hope the second time is the charm
-            rm -f build/transform.wasm
             docker run -v $PWD:/work -w /work  wasmsdk:v2 /build_wasm.sh
 
       - store_artifacts:
