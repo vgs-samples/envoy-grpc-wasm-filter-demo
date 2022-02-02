@@ -23,6 +23,10 @@ jobs:
             cd /tmp
             git clone https://github.com/proxy-wasm/proxy-wasm-cpp-sdk.git
             cd proxy-wasm-cpp-sdk
+            # Turns out the very next commit brings in changes that would break
+            # the build, probably due to different version of toolchain.
+            # so we pin the commit to ensure it's working
+            git checkout c17bf8257e5ebad2399f95cc15c8ff64e515519f
             docker build -t wasmsdk:v2 -f Dockerfile-sdk .
 
       - run:
